@@ -1,26 +1,38 @@
-name: Prime Otonom Logic
+name: SOCKS5 Ngrok Tunnel
+
 on:
-  repository_dispatch:
-    types: [prime_loop]
-  workflow_dispatch:
-    inputs:             # <--- BU KISIM EKSİK OLDUĞU İÇİN KUTU YOK
-      worker_id:
-        description: 'Manuel Baslatma ID (1-8)'
-        required: true
-        default: '1'
+  workflow_dispatch: # Manuel olarak butonla baslatmak icin
 
 jobs:
-  prime-engine:
+  start-proxy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 🚀 Run Worker
+      - name: Proxy ve Ngrok Kurulumu
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-          MIYSOFT_KEY: ${{ secrets.MIYSOFT_KEY }}
-          WORKER_ID: ${{ github.event.client_payload.worker_id || github.event.inputs.worker_id || 1 }}
+          NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
         run: |
-          chmod +x worker_prime.sh
-          ./worker_prime.sh
+          # 1. Gerekli paketleri kur (Microsocks hafif bir SOCKS5 sunucusudur)
+          sudo apt-get update -y
+          sudo apt-get install -y microsocks jq curl
+
+          # 2. Ngrok indir ve kur
+          curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | sudo tar -xz -C /usr/local/bin
+
+          # 3. Ngrok authtoken ayarla
+          ngrok config add-authtoken "$NGROK_AUTHTOKEN"
+
+          # 4. SOCKS5 proxy sunucusunu 1080 portunda baslat
+          microsocks -p 1080 &
+
+          # 5. Ngrok TCP tunelini 1080 portuna bagla
+          ngrok tcp 1080 --log=stdout > ngrok.log &
+          sleep 5
+
+          # 6. Ngrok baglanti adresini ve portunu ekrana yazdir
+          TUNNEL_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "===================================================="
+          echo "BAGLANTI ADRESINIZ: $TUNNEL_URL"
+          echo "===================================================="
+
+          # Islem kapanmasin diye 5-6 saat boyunca ayakta tut
+          sleep 21600
