@@ -5,7 +5,7 @@ on:
 
 jobs:
   start-proxy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Proxy ve Ngrok Kurulumu
         env:
